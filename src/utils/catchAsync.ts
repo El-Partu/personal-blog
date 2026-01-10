@@ -6,7 +6,7 @@ type AsyncFunction = (
   next: NextFunction
 ) => Promise<any>;
 
-const catchAsync = async (fn: AsyncFunction) => {
+const catchAsync = async  (fn: AsyncFunction) => {
   return (req: Request, res: Response, next: NextFunction) => {
     fn(req, res, next).catch(next);
   };
