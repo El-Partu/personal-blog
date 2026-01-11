@@ -1,6 +1,8 @@
 import express from 'express'
 import dotenv from 'dotenv'
 import morgan from 'morgan'
+
+import userRouter from './routes/userRoute.js'
 dotenv.config({path: './.env'})
 
 const app = express()
@@ -11,5 +13,8 @@ if(process.env.NODE_ENV === 'development'){
 
 // Middleware to parse JSON bodies
 app.use(express.json())
+
+//route
+app.use('/api/v1/users', userRouter)
 
 export default app
