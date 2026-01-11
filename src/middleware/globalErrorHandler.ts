@@ -1,4 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
+import { ZodError } from "zod";
+
 interface MongoError extends Error {
   statusCode?: number;
   status?: string;
@@ -39,6 +41,17 @@ export default (
   res: Response,
   next: NextFunction
 ) => {
+  // 🔹 Zod validation errors
+  if (err instanceof ZodError) {
+    return res.status(400).json({
+      status: "fail",
+      errors: err.issues.map((e) => ({
+        field: e.path.join("."),
+        message: e.message,
+      })),
+    });
+  }
+
   if (process.env.NODE_ENV === "development") {
     sendErrorDev(err, res);
   } else if (process.env.NODE_ENV === "production") {

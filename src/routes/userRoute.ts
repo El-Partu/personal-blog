@@ -1,8 +1,10 @@
-import {Router} from 'express';
-import * as userController from '../controllers/userController.js';
+import { Router } from "express";
+import * as userController from "../controllers/userController.js";
+import * as authController from "../controllers/auth/authController.js";
+import validate from "../middleware/validation.js";
+import { signupSchema } from "../schema/auth.schema.js";
 const router = Router();
 
-
-router.route('/').get(userController.getUser);
+router.post('/signup', validate(signupSchema), authController.signup);
 
 export default router;
