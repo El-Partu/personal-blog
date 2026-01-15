@@ -5,11 +5,26 @@ import type { SignupInput } from "../../schema/auth.schema.js";
 import User from "../../models/userModel.js";
 import EmailService from "../../services/email.js";
 import type { IUser } from "../../types/model.db.js";
-import jwt from "jsonwebtoken"
+import jwt from "jsonwebtoken";
 
-const signToken = (user: IUser)=>{
-  return jwt.sign({id: user.id, iat: Math.floor(Date.now() / 1000)}, process.env.JWT_SECRET!, {expiresIn: '90d'})
-}
+const signToken = (user: IUser) => {
+  return jwt.sign(
+    { id: user.id, iat: Math.floor(Date.now() / 1000) },
+    process.env.JWT_SECRET!,
+    { expiresIn: "90d" }
+  );
+};
+
+const sendTokenViaCokie = (res: Response, token: string) => {
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict" as const,
+    maxAge: 90 * 24 * 60 * 60 * 1000,
+  };
+
+  res.cookie("jwt", token, cookieOptions);
+};
 export const signup = catchAsync(
   async (
     req: Request<{}, {}, SignupInput>,
@@ -31,7 +46,8 @@ export const signup = catchAsync(
 
     await new EmailService(user, verificationUrl).sendVerificationEmail();
 
-    const token = signToken(user)
+    const token = signToken(user);
+    sendTokenViaCokie(res, token);
     res.status(200).json({
       success: true,
       token,
@@ -58,6 +74,7 @@ export const verifyEmail = catchAsync(
       return new AppError("This user does not exist. Please sign up", 403);
     }
     user.isEmailVerified = true;
+    user.updatedAt = new Date(Date.now());
     await user.save({ validateBeforeSave: false });
 
     res.status(200).json({

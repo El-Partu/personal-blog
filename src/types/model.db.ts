@@ -19,5 +19,5 @@ export interface IUser extends Document {
   passwordResetToken?: String;
   passwordResetTokenExpires?: Date;
   createdAt: Date;
-  updatedAt?: Date;
+  updatedAt: Date;
 }
