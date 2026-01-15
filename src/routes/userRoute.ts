@@ -6,6 +6,6 @@ import { signupSchema } from "../schema/auth.schema.js";
 const router = Router();
 
 router.post("/signup", validate(signupSchema), authController.signup);
-router.post("/signup", validate(signupSchema), authController.signup);
+router.get("/verify-email/:userId", authController.verifyEmail);
 
 export default router;

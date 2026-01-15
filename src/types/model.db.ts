@@ -6,8 +6,10 @@ export enum UserRole {
 }
 
 export interface IUser extends Document {
+  id: string;
   username: string;
   email: string;
+  isEmailVerified: boolean;
   role: UserRole;
   photo?: String;
   active: boolean;

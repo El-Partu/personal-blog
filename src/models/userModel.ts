@@ -1,4 +1,10 @@
-import mongoose, { Schema, type HydratedDocument, Document, Model, type CallbackWithoutResult } from "mongoose";
+import mongoose, {
+  Schema,
+  type HydratedDocument,
+  Document,
+  Model,
+  type CallbackWithoutResult,
+} from "mongoose";
 import validator from "validator";
 import { UserRole } from "../types/model.db.js";
 import type { IUser } from "../types/model.db.js";
@@ -21,6 +27,10 @@ const userSchema: Schema<IUser> = new Schema<IUser>({
       validator: (value: string) => validator.isEmail(value),
       message: "Invalid email address",
     },
+  },
+  isEmailVerified: {
+    type: Boolean,
+    default: false,
   },
   photo: {
     type: String,
