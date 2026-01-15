@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "nodemon dist/server.js",
+    "dev": "NODE_ENV=production nodemon dist/server.js",
     "build": "tsc && cp -r src/template dist/template"
   },
   "repository": {

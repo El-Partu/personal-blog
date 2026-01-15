@@ -55,7 +55,8 @@ export default (
   if (process.env.NODE_ENV === "development") {
     sendErrorDev(err, res);
   } else if (process.env.NODE_ENV === "production") {
-    let error = { ...err };
+    let error = { ...err, message: err.message };
+    console.log("Error", error);
     if (error.name === "CastError") error = handleCastErrorDB(error);
     if (error.code === 11000) error = handleDuplicateFieldsDB(error);
     if (error.name === "ValidationError")
@@ -67,29 +68,29 @@ export default (
 
 
 function sendErrorDev(err: MongoError, res: Response) {
-  const error = normalizeError(err);
+  // const error = normalizeError(err);
 
-  res.status(error.statusCode).json({
-    status: error.status,
-    error: error,
-    message: error.message,
-    stack: error.stack,
+  res.status(err.statusCode || 500).json({
+    status: err.status,
+    error: err,
+    message: err.message,
+    stack: err.stack,
   });
 }
 
 function sendErrorProd(err: MongoError, res: Response) {
-  const error = normalizeError(err);
+  // const error = normalizeError(err);
 
-  if (error.isOperational) {
-    return res.status(error.statusCode).json({
-      status: error.status,
-      message: error.message,
+  if (err.isOperational) {
+    return res.status(err.statusCode || 500).json({
+      status: err.status,
+      message: err.message,
     });
   }
 
   console.error("ERROR 💥", err);
-  res.status(error.statusCode).json({
-    status: error.status,
-    message: error.message,
+  res.status(err.statusCode || 500).json({
+    status: err.status,
+    message: "Something went very wrong!",
   });
 }

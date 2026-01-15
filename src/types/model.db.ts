@@ -20,4 +20,7 @@ export interface IUser extends Document {
   passwordResetTokenExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
+  isPasswordCorrect(
+    candidatePassword: string
+  ): Promise<boolean>;
 }

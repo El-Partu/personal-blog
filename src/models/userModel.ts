@@ -71,6 +71,11 @@ userSchema.pre("save", async function (this: HydratedDocument<IUser>) {
   this.confirmPassword = undefined as unknown as string;
 });
 
+userSchema.methods.isPasswordCorrect = async function (
+  candidatePassword: string
+): Promise<boolean> {
+  return await bcrypt.compare(candidatePassword, (this as IUser).password);
+};
 const User: Model<IUser> = mongoose.model<IUser>("User", userSchema);
 
 export default User;

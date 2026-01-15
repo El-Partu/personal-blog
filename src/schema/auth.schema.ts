@@ -22,5 +22,15 @@ export const signupSchema = z.object({
     }),
 });
 
+export const loginSchema = z.object({
+  body: z.object({
+    email: z
+      .string({ message: "Please enter your email!" })
+      .email({ message: "Please provide a valid email" }),
+    password: z.string({ message: "Please enter your password!" }),
+  }),
+});
+
 // Type inferred automatically
 export type SignupInput = z.infer<typeof signupSchema>["body"];
+export type loginInput = z.infer<typeof loginSchema>["body"]
