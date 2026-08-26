@@ -15,7 +15,7 @@
     "build": "npm run build --workspace shared && npm run build --workspace backend && npm run build --workspace frontend",
     "build:shared": "npm run build --workspace shared",
     "seed": "npm run seed --workspace backend",
-    "test": "npm run test --workspace backend",
+    "test": "npm run test --workspace backend && npm run test --workspace frontend",
     "typecheck": "npm run typecheck --workspace shared && npm run typecheck --workspace backend && npm run typecheck --workspace frontend"
   },
   "devDependencies": {

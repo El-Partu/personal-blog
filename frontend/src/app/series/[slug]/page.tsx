@@ -4,6 +4,15 @@ import type { Metadata } from "next";
 import { getAllSeries, getSeries } from "@/lib/api";
 import { formatShortDate, toIsoDate } from "@/lib/format";
 import { site } from "@/lib/site";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import JsonLd from "@/components/JsonLd";
+import {
+  absoluteUrl,
+  breadcrumbSchema,
+  itemListSchema,
+  webPageSchema,
+  type Crumb,
+} from "@/lib/seo";
 
 export const revalidate = 60;
 
@@ -43,14 +52,37 @@ export default async function SeriesDetailPage({ params }: Props) {
 
   const totalMinutes = series.posts.reduce((sum, post) => sum + post.readTimeMinutes, 0);
 
+  const crumbs: Crumb[] = [
+    { name: "Home", path: "/" },
+    { name: "Series", path: "/series" },
+    { name: series.title, path: `/series/${slug}` },
+  ];
+  const url = absoluteUrl(`/series/${slug}`);
+
+  /**
+   * A series is an ordered reading path, so the ItemList is explicitly
+   * ascending — unlike the reverse-chronological archives.
+   */
+  const schemas = [
+    webPageSchema({
+      url,
+      name: `${series.title} — ${site.name}`,
+      description: series.description || `The ${series.title} series on ${site.name}.`,
+      crumbs,
+      type: "CollectionPage",
+    }),
+    {
+      ...itemListSchema(series.posts, url, series.title),
+      itemListOrder: "https://schema.org/ItemListOrderAscending",
+    },
+    breadcrumbSchema(crumbs, url),
+  ];
+
   return (
     <div className="u-container py-12 md:py-16">
+      <JsonLd schemas={schemas} />
       <header className="mb-10 border-b pb-8" style={{ borderColor: "var(--border)" }}>
-        <nav aria-label="Breadcrumb" className="mb-4">
-          <Link href="/series" className="u-meta hover:text-[var(--accent)]">
-            ← All series
-          </Link>
-        </nav>
+        <Breadcrumbs crumbs={crumbs} className="mb-4" />
         <p className="u-meta mb-3">Series</p>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{series.title}</h1>
         {series.description && (

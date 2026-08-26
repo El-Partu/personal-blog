@@ -4,6 +4,15 @@ import PostCard from "@/components/PostCard";
 import { getAllSeries, getPosts, getTags } from "@/lib/api";
 import { site } from "@/lib/site";
 import { slugifyTag } from "@/lib/format";
+import JsonLd from "@/components/JsonLd";
+import {
+  absoluteUrl,
+  blogSchema,
+  organizationSchema,
+  personSchema,
+  webPageSchema,
+  webSiteSchema,
+} from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: `${site.name} — ${site.tagline}`,
@@ -27,6 +36,24 @@ export default async function HomePage() {
 
   const [featured, ...rest] = posts;
 
+  /**
+   * The homepage is where the site's root entities are declared. Every other
+   * page references these by `@id` instead of redefining them, which is what
+   * makes the whole site resolve to one Organization and one Person.
+   */
+  const schemas = [
+    organizationSchema(),
+    webSiteSchema(),
+    personSchema(),
+    webPageSchema({
+      // absoluteUrl("/") keeps the trailing slash consistent with the other @ids.
+      url: absoluteUrl("/"),
+      name: `${site.name} — ${site.tagline}`,
+      description: site.description,
+    }),
+    ...(posts.length > 0 ? [blogSchema(posts)] : []),
+  ];
+
   if (postsResult.status === "rejected") {
     return (
       <div className="u-container py-24 text-center">
@@ -41,6 +68,8 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd schemas={schemas} />
+
       {/* Masthead */}
       <section className="border-b" style={{ borderColor: "var(--border)" }}>
         <div className="u-container py-16 md:py-24">

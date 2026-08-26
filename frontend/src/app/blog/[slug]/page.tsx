@@ -5,6 +5,16 @@ import { getAllPostsForFeed, getPost, getRelatedPosts } from "@/lib/api";
 import { renderMarkdown } from "@/lib/markdown";
 import { formatDate, slugifyTag, toIsoDate } from "@/lib/format";
 import { site } from "@/lib/site";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import JsonLd from "@/components/JsonLd";
+import {
+  absoluteUrl,
+  blogPostingSchema,
+  breadcrumbSchema,
+  ogImageUrl,
+  webPageSchema,
+  type Crumb,
+} from "@/lib/seo";
 import TableOfContents from "@/components/TableOfContents";
 import ShareButtons from "@/components/ShareButtons";
 import SeriesNav from "@/components/SeriesNav";
@@ -35,28 +45,51 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = post.seoTitle ?? post.title;
   const description = post.seoDescription ?? post.excerpt;
   const url = `${site.url}/blog/${post.slug}`;
+  // Fall back to the generated card when the post has no cover image.
+  const image = post.coverImage ? absoluteUrl(post.coverImage) : ogImageUrl(`/blog/${post.slug}`);
 
   return {
     title,
     description,
     alternates: { canonical: `/blog/${post.slug}` },
+    keywords: post.tags,
+    authors: [{ name: site.author.name, url: absoluteUrl("/about") }],
+    category: post.category,
     openGraph: {
       type: "article",
       url,
       title,
       description,
       siteName: site.name,
+      locale: site.locale,
       publishedTime: toIsoDate(post.publishedAt),
       modifiedTime: toIsoDate(post.updatedAt),
       authors: [site.author.name],
+      section: post.category,
       tags: post.tags,
-      ...(post.coverImage ? { images: [{ url: post.coverImage, alt: post.title }] } : {}),
+      images: [{ url: image, width: 1200, height: 630, alt: post.title }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      ...(post.coverImage ? { images: [post.coverImage] } : {}),
+      images: [image],
+    },
+    /**
+     * Opt in to the largest preview treatment and uncapped snippets — this is
+     * what lets Google show rich, full-width results instead of a truncated
+     * two-line description.
+     */
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
     },
   };
 }
@@ -75,72 +108,62 @@ export default async function PostPage({ params }: Props) {
   const url = `${site.url}/blog/${post.slug}`;
   const showToc = toc.length >= 3;
 
-  // JSON-LD Article schema for rich results (Section 5, SEO).
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: post.title,
-    description: post.seoDescription ?? post.excerpt,
-    datePublished: toIsoDate(post.publishedAt),
-    dateModified: toIsoDate(post.updatedAt),
-    author: {
-      "@type": "Person",
-      name: site.author.name,
-      url: site.author.github,
-    },
-    publisher: { "@type": "Organization", name: site.name, url: site.url },
-    mainEntityOfPage: { "@type": "WebPage", "@id": url },
-    keywords: post.tags.join(", "),
-    articleSection: post.category,
-    wordCount: post.content.split(/\s+/).length,
-    ...(post.coverImage ? { image: [post.coverImage] } : {}),
-  };
+  const crumbs: Crumb[] = [
+    { name: "Home", path: "/" },
+    { name: "Articles", path: "/blog" },
+    { name: post.category, path: `/category/${slugifyTag(post.category)}` },
+    { name: post.title, path: `/blog/${post.slug}` },
+  ];
+
+  /**
+   * Separate schema nodes, cross-linked by `@id`. The article points at the
+   * shared Person/Organization entities rather than restating them, so the
+   * whole site resolves to one author identity.
+   */
+  const schemas = [
+    blogPostingSchema({
+      title: post.title,
+      slug: post.slug,
+      description: post.seoDescription ?? post.excerpt,
+      content: post.content,
+      coverImage: post.coverImage,
+      category: post.category,
+      tags: post.tags,
+      publishedAt: post.publishedAt,
+      updatedAt: post.updatedAt,
+      readTimeMinutes: post.readTimeMinutes,
+      authorName: site.author.name,
+    }),
+    webPageSchema({
+      url,
+      name: post.seoTitle ?? post.title,
+      description: post.seoDescription ?? post.excerpt,
+      crumbs,
+      datePublished: post.publishedAt,
+      dateModified: post.updatedAt,
+      primaryImage: post.coverImage,
+    }),
+    breadcrumbSchema(crumbs, url),
+  ];
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLd schemas={schemas} />
       <ViewCounter slug={post.slug} />
 
       <article className="u-container py-10 md:py-14">
-        {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="mb-7">
-          <ol className="flex flex-wrap items-center gap-1.5">
-            <li>
-              <Link href="/" className="u-meta hover:text-[var(--accent)]">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true" className="u-meta">
-              /
-            </li>
-            <li>
-              <Link href="/blog" className="u-meta hover:text-[var(--accent)]">
-                Articles
-              </Link>
-            </li>
-            <li aria-hidden="true" className="u-meta">
-              /
-            </li>
-            <li>
-              <Link
-                href={`/category/${slugifyTag(post.category)}`}
-                className="u-meta hover:text-[var(--accent)]"
-              >
-                {post.category}
-              </Link>
-            </li>
-          </ol>
-        </nav>
+        <Breadcrumbs crumbs={crumbs} className="mb-7" />
 
         <header className="mx-auto max-w-[68ch]">
           <h1 className="text-3xl font-bold leading-[1.15] tracking-tight md:text-[2.75rem]">
             {post.title}
           </h1>
 
-          <p className="mt-5 text-lg leading-relaxed" style={{ color: "var(--fg-muted)" }}>
+          {/* `post-summary` is referenced by the SpeakableSpecification in the schema. */}
+          <p
+            className="post-summary mt-5 text-lg leading-relaxed"
+            style={{ color: "var(--fg-muted)" }}
+          >
             {post.excerpt}
           </p>
 

@@ -2,11 +2,29 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getAllSeries, getAuthor, getPosts } from "@/lib/api";
 import { site } from "@/lib/site";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import JsonLd from "@/components/JsonLd";
+import {
+  absoluteUrl,
+  breadcrumbSchema,
+  organizationSchema,
+  personSchema,
+  webPageSchema,
+  type Crumb,
+} from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "About",
-  description: `About ${site.author.name} and ${site.name}.`,
+  title: `About ${site.author.name}`,
+  description:
+    `${site.author.name} writes ${site.name} — long-form computer science study notes on ` +
+    `${site.author.knowsAbout.slice(0, 3).join(", ")} and more.`,
   alternates: { canonical: "/about" },
+  openGraph: {
+    type: "profile",
+    url: absoluteUrl("/about"),
+    title: `About ${site.author.name}`,
+    siteName: site.name,
+  },
 };
 
 export const revalidate = 300;
@@ -21,28 +39,37 @@ export default async function AboutPage() {
   const name = author?.name ?? site.author.name;
   const bio = author?.bio?.trim() || site.author.fallbackBio;
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ProfilePage",
-    mainEntity: {
-      "@type": "Person",
-      name,
+  const crumbs: Crumb[] = [
+    { name: "Home", path: "/" },
+    { name: "About", path: "/about" },
+  ];
+  const url = absoluteUrl("/about");
+
+  /**
+   * The author entity lives here, at the `@id` every article's `author` field
+   * points to. Credentials (`jobTitle`, `alumniOf`, `knowsAbout`) and verified
+   * profiles (`sameAs`) are the machine-readable side of E-E-A-T.
+   */
+  const schemas = [
+    webPageSchema({
+      url,
+      name: `About ${name}`,
       description: bio,
-      url: `${site.url}/about`,
-      sameAs: [site.author.github, site.author.linkedin],
-    },
-  };
+      crumbs,
+      type: "ProfilePage",
+    }),
+    { ...personSchema({ name, description: bio }), mainEntityOfPage: { "@id": `${url}#webpage` } },
+    organizationSchema(),
+    breadcrumbSchema(crumbs, url),
+  ];
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLd schemas={schemas} />
 
       <div className="u-container py-12 md:py-16">
         <div className="mx-auto max-w-[68ch]">
-          <p className="u-meta mb-3">About</p>
+          <Breadcrumbs crumbs={crumbs} className="mb-6" />
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
             Hi, I&apos;m {name}.
           </h1>

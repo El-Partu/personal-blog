@@ -20,6 +20,7 @@ KaTeX maths, auto-generated tables of contents, and multi-part series.
 - [API reference](#api-reference)
 - [Writing posts](#writing-posts)
 - [Deployment](#deployment)
+- [SEO](#seo)
 - [Tests](#tests)
 - [Design notes](#design-notes)
 - [What's intentionally not here](#whats-intentionally-not-here)
@@ -376,13 +377,106 @@ network access from your host (`0.0.0.0/0` for Render's dynamic IPs).
 
 ---
 
+## SEO
+
+Everything here is an *on-site* signal — the part that is actually solvable in
+code. Rankings also depend on content quality and inbound links, which no
+amount of markup substitutes for. See "Honest limits" at the end.
+
+### Structured data
+
+All JSON-LD, emitted from one place (`frontend/src/lib/seo.ts`) and rendered by
+`components/JsonLd.tsx`. Each schema type gets its **own** `<script>` tag, so a
+malformed node can't invalidate the rest of the page.
+
+The important idea is the **entity graph**: site-wide entities are declared once
+with stable `@id`s and referenced everywhere else, instead of being restated
+per page.
+
+| `@id` | Type | Declared on |
+| --- | --- | --- |
+| `/#organization` | `Organization` | Homepage |
+| `/#website` | `WebSite` (+ `SearchAction`) | Homepage |
+| `/about#person` | `Person` | About page |
+
+Every article's `author` is `{ "@id": "/about#person" }` — the same node the
+About page defines — so a crawler resolves all bylines to one identity.
+
+Per page type:
+
+| Route | Schemas |
+| --- | --- |
+| `/` | `Organization`, `WebSite` + `SearchAction`, `Person`, `WebPage`, `Blog` |
+| `/blog/[slug]` | `BlogPosting`, `WebPage`, `BreadcrumbList` |
+| `/blog`, `/tags/*`, `/category/*`, `/series/*` | `CollectionPage`, `ItemList`, `BreadcrumbList` |
+| `/about` | `ProfilePage`, `Person`, `Organization`, `BreadcrumbList` |
+
+`BlogPosting` carries `wordCount` (code fences excluded), `articleSection`,
+`keywords`, `about`, `timeRequired`, `inLanguage`, `isAccessibleForFree` and a
+`SpeakableSpecification`. Breadcrumb markup is produced by the same `crumbs`
+array that renders the visible trail, so the two cannot drift apart — Google
+requires them to match.
+
+### E-E-A-T
+
+The author fields in `frontend/src/lib/site.ts` are load-bearing, not cosmetic:
+`jobTitle`, `alumniOf`, `knowsAbout` and `sameAs` become `Person` structured
+data. **Fill these in** — recent core updates weighted author authority heavily,
+and anonymous or generic bylines lost ground. Placeholder URLs containing
+`your-handle` are filtered out automatically rather than published as fake
+profiles.
+
+### Crawlability & AI search
+
+- `robots.ts` distinguishes **answer engines** (`OAI-SearchBot`, `PerplexityBot`,
+  `Claude-SearchBot`, …), which cite and send traffic and are allowed, from
+  **training crawlers** (`GPTBot`, `ClaudeBot`, `CCBot`, `Google-Extended`).
+  Opt out of training only with `ALLOW_AI_TRAINING_CRAWLERS=false`.
+  Note `Google-Extended` has no effect on Google Search ranking.
+- `/llms.txt` follows the llmstxt.org convention: a generated Markdown index of
+  every post and series. No platform has confirmed it as a ranking signal — it
+  is cheap, speculative upside that stays current automatically.
+- `/admin`, `/api/` and `/search` are disallowed (thin/duplicate content).
+- `sitemap.xml` reports `lastModified` from the newest post rather than
+  "now", so the freshness signal stays credible.
+
+### Indexing correctness
+
+- **Paginated archives self-canonicalise.** `/blog?page=2` points at itself, not
+  page 1 — the common mistake that de-indexes every post only reachable from
+  deeper pages.
+- `max-snippet: -1` and `max-image-preview: large` opt in to full-length
+  snippets and large thumbnails.
+- Generated 1200x630 OG cards for every page and post via `next/og`, so
+  `BlogPosting.image` is always satisfied and social previews never fall back
+  to nothing.
+
+### Core Web Vitals
+
+SSG + ISR, ~105 kB First Load JS (well under a 150 kB budget), no client-side
+data fetching on content pages, `aspect-ratio` on card images to prevent layout
+shift, and a blocking theme script to avoid a flash of the wrong theme.
+
+The one known cost is the render-blocking Google Fonts stylesheet (see
+`app/layout.tsx`); self-hosting with `next/font/local` is the documented
+upgrade if you want the last few LCP milliseconds.
+
+### Honest limits
+
+Structured data does not directly raise rankings — it buys eligibility for rich
+results and makes pages unambiguous to AI answer engines. Off-site authority
+(who links to you) and genuine content quality are not code-solvable, and
+Google discontinued FAQ rich results in May 2026, so no FAQ markup is included.
+
+---
+
 ## Tests
 
 ```bash
 npm test
 ```
 
-41 Vitest tests covering the parts most worth protecting:
+58 Vitest tests covering the parts most worth protecting:
 
 - **Content utilities** — slugs, read-time, excerpt truncation, and that
   `escapeRegex` stops a search query behaving as a wildcard.
@@ -392,7 +486,13 @@ npm test
   admin CRUD; slug de-duplication; **HTML sanitisation** (`<script>` and
   `onerror` stripped while code fences survive intact); series detach-on-delete.
 
-The suite runs against the in-memory driver, so no MongoDB is needed for CI.
+- **SEO helpers** (`frontend/src/lib/__tests__/seo.test.ts`) — stable entity
+  `@id`s, headline truncation at Google's 110-character limit, ISO-8601 dates
+  and durations, OG-image fallback, and that placeholder social URLs are never
+  emitted as real `sameAs` profiles.
+
+The backend suite runs against the in-memory driver, so no MongoDB is needed
+for CI.
 
 ---
 

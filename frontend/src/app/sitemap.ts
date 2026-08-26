@@ -13,9 +13,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getCategories().catch(() => []),
   ]);
 
+  /**
+   * `lastModified` on the homepage/archive is driven by the newest post rather
+   * than `new Date()`: a sitemap that claims every page changed on every crawl
+   * trains Google to distrust the signal entirely.
+   */
+  const newest = posts.reduce<Date | undefined>((latest, post) => {
+    const date = new Date(post.updatedAt);
+    return !latest || date > latest ? date : latest;
+  }, undefined);
+  const lastModified = newest ?? new Date();
+
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: site.url, lastModified: new Date(), changeFrequency: "daily", priority: 1 },
-    { url: `${site.url}/blog`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+    { url: site.url, lastModified, changeFrequency: "daily", priority: 1 },
+    { url: `${site.url}/blog`, lastModified, changeFrequency: "daily", priority: 0.9 },
     { url: `${site.url}/series`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${site.url}/tags`, changeFrequency: "weekly", priority: 0.6 },
     { url: `${site.url}/about`, changeFrequency: "monthly", priority: 0.5 },
