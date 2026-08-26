@@ -1,46 +1,28 @@
 {
   "name": "personal-blog",
   "version": "1.0.0",
-  "description": "",
-  "main": "app.js",
+  "private": true,
+  "description": "A CS study-notes blog: Next.js frontend + Express/MongoDB API",
+  "workspaces": [
+    "shared",
+    "backend",
+    "frontend"
+  ],
   "scripts": {
-    "start": "nodemon dist/server.js",
-    "dev": "NODE_ENV=production nodemon dist/server.js",
-    "build": "tsc && cp -r src/template dist/template"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/El-Partu/personal-blog.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
-  "bugs": {
-    "url": "https://github.com/El-Partu/personal-blog/issues"
-  },
-  "homepage": "https://github.com/El-Partu/personal-blog#readme",
-  "dependencies": {
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/nodemailer": "^7.0.5",
-    "bcryptjs": "^3.0.3",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "handlebars": "^4.7.8",
-    "jsonwebtoken": "^9.0.3",
-    "mailtrap": "^4.4.0",
-    "mongodb": "^7.0.0",
-    "mongoose": "^9.1.2",
-    "morgan": "^1.10.1",
-    "nodemon": "^3.1.11",
-    "validator": "^13.15.26",
-    "zod": "^4.3.5"
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "build": "npm run build --workspace shared && npm run build --workspace backend && npm run build --workspace frontend",
+    "build:shared": "npm run build --workspace shared",
+    "seed": "npm run seed --workspace backend",
+    "test": "npm run test --workspace backend && npm run test --workspace frontend",
+    "typecheck": "npm run typecheck --workspace shared && npm run typecheck --workspace backend && npm run typecheck --workspace frontend"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/express": "^5.0.6",
-    "@types/morgan": "^1.9.10",
-    "@types/validator": "^13.15.10",
-    "typescript": "^5.9.3"
-  }
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "ISC"
 }

@@ -1,0 +1,170 @@
+/* Admin-only styles: form controls and the editor preview pane. */
+
+.admin-root .field-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  margin-bottom: 0.4rem;
+}
+
+.admin-root .field-input,
+.admin-root .field-textarea,
+.admin-root .field-select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: var(--bg-raised);
+  color: var(--fg);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.admin-root .field-input:focus,
+.admin-root .field-textarea:focus,
+.admin-root .field-select:focus {
+  border-color: var(--accent);
+}
+
+.admin-root .field-textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.admin-root .field-error {
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  color: #dc2626;
+}
+.dark .admin-root .field-error {
+  color: #f87171;
+}
+
+.admin-root .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.45rem;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.875rem;
+  font-weight: 550;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+.admin-root .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.admin-root .btn-primary {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+.admin-root .btn-primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.admin-root .btn-secondary {
+  border-color: var(--border-strong);
+  color: var(--fg);
+  background: transparent;
+}
+.admin-root .btn-secondary:hover:not(:disabled) {
+  background: var(--bg-subtle);
+}
+.admin-root .btn-danger {
+  border-color: #dc2626;
+  color: #dc2626;
+  background: transparent;
+}
+.admin-root .btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+  color: #fff;
+}
+
+/* The markdown source editor */
+.admin-root .editor-textarea {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  tab-size: 2;
+  min-height: 60vh;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg-raised);
+  color: var(--fg);
+  padding: 1rem;
+  outline: none;
+  resize: vertical;
+}
+.admin-root .editor-textarea:focus {
+  border-color: var(--accent);
+}
+
+/* Editor preview pane — mirrors the published article styles. */
+.admin-root .preview-body {
+  font-size: 1rem;
+  max-width: none;
+}
+.admin-root .preview-code {
+  position: relative;
+  margin-block: 1.2em;
+}
+.admin-root .preview-code-lang {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  pointer-events: none;
+}
+.admin-root .preview-code pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+.admin-root .preview-body img {
+  max-width: 100%;
+  height: auto;
+}
+
+.admin-root .status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+}
+.admin-root .status-published {
+  color: #15803d;
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+.dark .admin-root .status-published {
+  color: #4ade80;
+  border-color: #14532d;
+  background: #052e16;
+}
+.admin-root .status-draft {
+  color: var(--fg-muted);
+  background: var(--bg-subtle);
+}
