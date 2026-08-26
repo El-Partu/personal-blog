@@ -45,11 +45,7 @@ export function assertProductionAdminPassword(password: string | undefined, prod
   }
 }
 
-/**
- * Refuse to boot in production with a wildcard CORS origin. `CORS_ORIGINS="*"`
- * (or any pattern containing `*`) would let any site issue credentialed
- * cross-origin API calls; every entry must name an exact origin.
- */
+/** Refuse to boot in production with a wildcard CORS origin. `CORS_ORIGINS="*"` (or any pattern containing `*`) would let any site issue credentialed cross-origin API calls; every entry must name an exact origin. */
 export function assertProductionCorsOrigins(origins: string[], production: boolean): void {
   if (!production) return;
   if (origins.includes("*") || origins.some((origin) => origin.includes("*"))) {
@@ -59,6 +55,22 @@ export function assertProductionCorsOrigins(origins: string[], production: boole
   }
 }
 
+/**
+ * Exact preview origins for the *current* e2b sandbox (dev only).
+ *
+ * The sandbox id is an opaque per-session value, so this yields two literal
+ * origins (the frontend and API preview URLs) — never a `*.e2b.app` pattern.
+ * Only the sandbox the server is actually running in is trusted, and only
+ * outside production; production keeps exact-match-only CORS, so an attacker
+ * registering an unrelated subdomain cannot obtain credentialed access.
+ */
+export function devPreviewOrigins(sandboxId: string | undefined, ports: number[]): string[] {
+  if (!sandboxId) return [];
+  const origins = new Set<string>();
+  for (const port of ports) origins.add(`https://${port}-${sandboxId}.e2b.app`);
+  return [...origins];
+}
+
 const jwtSecret = optional("JWT_SECRET");
 const adminPassword = optional("ADMIN_PASSWORD") ?? DEFAULT_ADMIN_PASSWORD;
 const corsOrigins = (optional("CORS_ORIGINS") ?? "http://localhost:3000")
@@ -66,19 +78,27 @@ const corsOrigins = (optional("CORS_ORIGINS") ?? "http://localhost:3000")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+// Dev-only: the exact preview URLs of the e2b sandbox this process runs in.
+const port = Number(optional("PORT") ?? 4000);
+const corsPreviewOrigins = isProduction
+  ? []
+  : devPreviewOrigins(optional("E2B_SANDBOX_ID"), [3000, port]);
+
 assertProductionJwtSecret(jwtSecret, isProduction);
 assertProductionAdminPassword(adminPassword, isProduction);
 assertProductionCorsOrigins(corsOrigins, isProduction);
+assertProductionCorsOrigins(corsPreviewOrigins, isProduction);
 
 export const env = {
   nodeEnv,
   isProduction,
-  port: Number(optional("PORT") ?? 4000),
+  port,
   mongodbUri: optional("MONGODB_URI"),
   // A random-ish dev default keeps local runs frictionless; production throws above.
   jwtSecret: jwtSecret ?? "dev-only-insecure-secret-change-me",
   jwtExpiresIn: optional("JWT_EXPIRES_IN") ?? "30d",
   corsOrigins,
+  corsPreviewOrigins,
   admin: {
     email: optional("ADMIN_EMAIL") ?? "admin@example.com",
     password: adminPassword,

@@ -115,6 +115,24 @@ describe("CORS", () => {
       expect(blocked.headers["access-control-allow-origin"]).toBeUndefined();
       expect(blocked.headers["access-control-allow-credentials"]).toBeUndefined();
     }
+
+    // On an e2b sandbox, only the *current* sandbox's exact preview origin is
+    // trusted in dev — sibling sandboxes stay blocked.
+    const sandboxId = process.env.E2B_SANDBOX_ID;
+    if (sandboxId) {
+      const preview = await request(app)
+        .get("/health")
+        .set("Origin", `https://3000-${sandboxId}.e2b.app`);
+      expect(preview.status).toBe(200);
+      expect(preview.headers["access-control-allow-origin"]).toBe(
+        `https://3000-${sandboxId}.e2b.app`
+      );
+
+      const sibling = await request(app)
+        .get("/health")
+        .set("Origin", `https://3000-${sandboxId}x.e2b.app`);
+      expect(sibling.status).toBe(403);
+    }
   });
 });
 

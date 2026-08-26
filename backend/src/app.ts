@@ -34,6 +34,10 @@ app.use(
  * those prefixes would let an attacker's page make authenticated API calls and
  * read the responses. `CORS_ORIGINS="*"` is refused at boot in production
  * (see config/env.ts).
+ *
+ * In local dev on an e2b sandbox, `corsPreviewOrigins` adds the *literal*
+ * preview URLs of the current sandbox (derived from `E2B_SANDBOX_ID`) — still
+ * exact origins, and never present in production.
  */
 app.use(
   cors({
@@ -41,7 +45,11 @@ app.use(
       // Same-origin/server-side requests send no Origin header.
       if (!origin) return callback(null, true);
       // `*` is a dev-only convenience; production cannot reach this state.
-      if (env.corsOrigins.includes("*") || env.corsOrigins.includes(origin)) {
+      if (
+        env.corsOrigins.includes("*") ||
+        env.corsOrigins.includes(origin) ||
+        env.corsPreviewOrigins.includes(origin)
+      ) {
         return callback(null, true);
       }
       return callback(new AppError(`Origin ${origin} is not allowed by CORS.`, 403));
