@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  AdminStats,
   AdminUser,
   ApiSuccess,
   AuthResponse,
@@ -124,6 +125,15 @@ export async function logout(): Promise<void> {
 }
 
 /* ---- posts ---- */
+
+/* ---------------------------------------------------------------- */
+/* Analytics                                                        */
+/* ---------------------------------------------------------------- */
+
+/** Dashboard analytics, aggregated server-side. */
+export function fetchStats(): Promise<AdminStats> {
+  return request<AdminStats>("/admin/stats");
+}
 
 export function listPosts(params: { page?: number; q?: string; status?: string } = {}) {
   const search = new URLSearchParams();

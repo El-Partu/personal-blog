@@ -17,6 +17,9 @@ const router = Router();
 router.use(protect);
 
 // Posts
+// Dashboard analytics.
+router.get("/stats", admin.getStats);
+
 router.get("/posts", admin.listAdminPosts);
 router.post("/posts", validateBody(postInputSchema), admin.createPost);
 router.get("/posts/:id", admin.getAdminPost);

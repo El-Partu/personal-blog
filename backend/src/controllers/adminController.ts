@@ -5,6 +5,7 @@ import AppError from "../utils/appError.js";
 import { getDatabase } from "../db/index.js";
 import { toPost, toPostSummary, toSeries, toTag } from "../serializers/index.js";
 import { ensureUniqueSlug, listPosts } from "../services/postService.js";
+import { getAdminStats } from "../services/statsService.js";
 import { calculateReadTime, makeExcerpt, toSlug } from "../utils/content.js";
 import { postListQuerySchema } from "../schema/content.schema.js";
 import type {
@@ -45,6 +46,15 @@ function sanitizeMarkdown(markdown: string): string {
     textFilter: (text) => text,
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* Analytics                                                           */
+/* ------------------------------------------------------------------ */
+
+/** GET /api/v1/admin/stats — dashboard analytics. */
+export const getStats = catchAsync(async (_req: Request, res: Response) => {
+  res.status(200).json({ status: "success", data: await getAdminStats() });
+});
 
 /* ------------------------------------------------------------------ */
 /* Posts                                                               */

@@ -212,6 +212,77 @@ describe("auth", () => {
   });
 });
 
+describe("admin stats", () => {
+  it("requires authentication", async () => {
+    const res = await request(app).get("/api/v1/admin/stats");
+    expect(res.status).toBe(401);
+  });
+
+  it("aggregates totals, counting drafts separately from published", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/stats")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    const { totals } = res.body.data;
+    expect(totals.published).toBe(2);
+    expect(totals.drafts).toBe(1);
+    expect(totals.posts).toBe(3);
+    // 10 + 5 from the published posts, plus any increments from the view-counter
+    // test above; the draft's 0 must never be counted either way.
+    expect(totals.views).toBeGreaterThanOrEqual(15);
+    expect(totals.readTimeMinutes).toBe(5);
+    expect(totals.words).toBeGreaterThan(0);
+  });
+
+  it("never leaks draft content into the public-facing breakdowns", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/stats")
+      .set("Authorization", `Bearer ${token}`);
+
+    const categories = res.body.data.byCategory.map((row: { label: string }) => row.label);
+    const tags = res.body.data.byTag.map((row: { label: string }) => row.label);
+    // "Drafts"/"Secret" belong only to the unpublished post.
+    expect(categories).not.toContain("Drafts");
+    expect(tags).not.toContain("Secret");
+    expect(categories).toContain("Algorithms");
+  });
+
+  it("ranks top posts by view count", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/stats")
+      .set("Authorization", `Bearer ${token}`);
+
+    const top = res.body.data.topPosts;
+    expect(top[0].slug).toBe("published-one");
+    expect(top[0].viewCount).toBeGreaterThanOrEqual(10);
+    // Ordering is what matters, not the absolute count.
+    expect(top[0].viewCount).toBeGreaterThan(top[1].viewCount);
+    expect(top.some((p: { slug: string }) => p.slug === "secret-draft")).toBe(false);
+  });
+
+  it("surfaces drafts in the pending list", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/stats")
+      .set("Authorization", `Bearer ${token}`);
+
+    const pending = res.body.data.pendingDrafts;
+    expect(pending).toHaveLength(1);
+    expect(pending[0].slug).toBe("secret-draft");
+  });
+
+  it("returns a dense 12-month publishing series", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/stats")
+      .set("Authorization", `Bearer ${token}`);
+
+    const series = res.body.data.publishing;
+    expect(series).toHaveLength(12);
+    // Months with no posts must still be present as zeroes.
+    expect(series.every((p: { month: string }) => /^\d{4}-\d{2}$/.test(p.month))).toBe(true);
+  });
+});
+
 describe("admin routes", () => {
   it("rejects unauthenticated requests", async () => {
     await request(app).get("/api/v1/admin/posts").expect(401);

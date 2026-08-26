@@ -203,3 +203,59 @@ export interface TocEntry {
 export const POST_STATUSES: readonly PostStatus[] = ["draft", "published"];
 
 export const DEFAULT_PAGE_SIZE = 9;
+
+/* ------------------------------------------------------------------ *
+ * Admin analytics
+ * ------------------------------------------------------------------ */
+
+/** A single labelled data point (used for charts and breakdown tables). */
+export interface StatPoint {
+  label: string;
+  value: number;
+}
+
+/** Posts published per month, oldest bucket first. */
+export interface PublishingPoint {
+  /** `YYYY-MM`. */
+  month: string;
+  count: number;
+}
+
+/**
+ * Everything the admin dashboard renders. Computed server-side with
+ * aggregation pipelines so the client never has to page through the whole
+ * collection to count things.
+ */
+export interface AdminStats {
+  totals: {
+    posts: number;
+    published: number;
+    drafts: number;
+    series: number;
+    tags: number;
+    categories: number;
+    views: number;
+    words: number;
+    readTimeMinutes: number;
+  };
+  /** Most-viewed published posts. */
+  topPosts: {
+    _id: string;
+    title: string;
+    slug: string;
+    viewCount: number;
+    publishedAt?: string;
+  }[];
+  /** Published post counts per category and per tag, descending. */
+  byCategory: StatPoint[];
+  byTag: StatPoint[];
+  /** Publishing cadence for the last 12 months. */
+  publishing: PublishingPoint[];
+  /** Drafts waiting to be finished, most recently edited first. */
+  pendingDrafts: {
+    _id: string;
+    title: string;
+    slug: string;
+    updatedAt: string;
+  }[];
+}

@@ -20,6 +20,7 @@ KaTeX maths, auto-generated tables of contents, and multi-part series.
 - [API reference](#api-reference)
 - [Writing posts](#writing-posts)
 - [Deployment](#deployment)
+- [Admin panel](#admin-panel)
 - [SEO](#seo)
 - [Tests](#tests)
 - [Design notes](#design-notes)
@@ -286,6 +287,10 @@ Base URL: `/api/v1`. All responses use an envelope:
 
 ### Admin — 🔒 all require `Authorization: Bearer <token>`
 
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/admin/stats` | Dashboard analytics (totals, top posts, breakdowns, cadence) |
+
 | Method | Endpoint |
 |---|---|
 | `GET`/`POST` | `/admin/posts` (drafts included) |
@@ -374,6 +379,47 @@ network access from your host (`0.0.0.0/0` for Render's dynamic IPs).
 - [ ] Edit `frontend/src/lib/site.ts` (blog name, your name, GitHub, LinkedIn)
 - [ ] `NEXT_PUBLIC_SITE_URL` matches the real domain (used by RSS/sitemap/OG)
 - [ ] Submit `/sitemap.xml` to Google Search Console
+
+---
+
+## Admin panel
+
+Sign in at `/admin/login` (seeded credentials are in [Quick start](#quick-start)).
+The whole panel is behind JWT auth and is `noindex` + disallowed in `robots.txt`.
+
+| Route | What it does |
+| --- | --- |
+| `/admin` | Dashboard — analytics, most-read posts, drafts to finish |
+| `/admin/posts` | List, search and filter every post including drafts |
+| `/admin/posts/new`, `/admin/posts/[id]` | Markdown editor with live preview |
+| `/admin/series` | Create series and drag posts into reading order |
+| `/admin/tags` | Create and delete tags; see category usage counts |
+| `/admin/media` | Upload and manage images |
+| `/admin/profile` | Your name, bio and avatar (feeds the About page) |
+
+### Dashboard analytics
+
+Served by `GET /admin/stats`, computed with aggregation pipelines in
+`backend/src/services/statsService.ts` so the cost stays flat as the blog grows:
+
+- **Headline** — lifetime views, published count, drafts, total words written
+  (prose only; fenced code and maths are excluded).
+- **Library** — series, tags, categories, and total reading time.
+- **Publishing cadence** — posts per month for the last 12 months, as a dense
+  series so quiet months show as gaps instead of being silently collapsed.
+- **Most read** — top five published posts by view count.
+- **Needs finishing** — most recently edited drafts, linking straight to the editor.
+- **By category / Top tags** — published-post breakdowns.
+
+Charts are hand-rolled CSS/SVG rather than a charting library, which keeps the
+dashboard at ~111 kB First Load JS. Every chart also carries a text label for
+screen readers, since bar heights convey nothing without sight.
+
+**What this is not.** View counts are lifetime totals incremented when a post
+page loads. They are not de-duplicated per visitor, and there is no referrer,
+geographic, device or per-day data — that needs a real analytics provider
+(Plausible, Umami and Fathom are all privacy-friendly and drop in with one
+script tag). Traffic *sources* in particular cannot be derived from this data.
 
 ---
 
@@ -476,7 +522,7 @@ Google discontinued FAQ rich results in May 2026, so no FAQ markup is included.
 npm test
 ```
 
-58 Vitest tests covering the parts most worth protecting:
+64 Vitest tests covering the parts most worth protecting:
 
 - **Content utilities** — slugs, read-time, excerpt truncation, and that
   `escapeRegex` stops a search query behaving as a wildcard.
@@ -485,6 +531,8 @@ npm test
   rejection paths and identical errors for unknown-user vs wrong-password;
   admin CRUD; slug de-duplication; **HTML sanitisation** (`<script>` and
   `onerror` stripped while code fences survive intact); series detach-on-delete.
+- **Admin analytics** — totals aggregate correctly, and **drafts never leak into
+  published breakdowns, top-post rankings or view totals**.
 
 - **SEO helpers** (`frontend/src/lib/__tests__/seo.test.ts`) — stable entity
   `@id`s, headline truncation at Google's 110-character limit, ISO-8601 dates

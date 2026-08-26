@@ -12,7 +12,7 @@
  * can make to this file — a generic/anonymous byline is a known liability.
  */
 export const site = {
-  name: "Compiled Thoughts", // PLACEHOLDER — your blog name
+  name: "Compiled Thoughts",
   tagline: "Computer science notes, written to be understood",
   description:
     "Study notes and deep dives on algorithms, operating systems, databases and " +
@@ -22,16 +22,18 @@ export const site = {
   /** BCP-47 tag used in `inLanguage` structured data and `<html lang>`. */
   language: "en-GB",
   author: {
-    name: "Your Name", // PLACEHOLDER
+    name: "Loran Partu",
     /** Shown on the About page when the API has no bio saved. */
     fallbackBio:
-      "I'm a computer science student writing up what I learn. These notes cover " +
-      "algorithms, systems, databases and whatever coursework I'm currently buried in.",
-    github: "https://github.com/El-Partu", // PLACEHOLDER
+      "I'm Loran Partu — a software developer and computer science graduate. I write " +
+      "up what I'm learning across mathematics, AI and embedded systems, plus the " +
+      "algorithms, operating systems and database internals underneath them.",
+    github: "https://github.com/El-Partu",
+    // TODO (Loran): replace with your real LinkedIn URL, or set to "" to omit it.
     linkedin: "https://linkedin.com/in/your-handle", // PLACEHOLDER
-    email: "you@example.com", // PLACEHOLDER
-    /** PLACEHOLDER — shown on the About page and emitted as `Person.jobTitle`. */
-    jobTitle: "Computer Science Student",
+    email: "you@example.com", // PLACEHOLDER — your public contact address
+    /** Shown on the About page and emitted as `Person.jobTitle`. */
+    jobTitle: "Software Developer",
     /** PLACEHOLDER — set to your university, or "" to omit it from schema. */
     alumniOf: "",
     /**
@@ -40,6 +42,9 @@ export const site = {
      * on. Keep it honest and specific.
      */
     knowsAbout: [
+      "Mathematics",
+      "Artificial Intelligence",
+      "Embedded Systems",
       "Algorithms",
       "Data Structures",
       "Operating Systems",
