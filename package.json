@@ -24,5 +24,11 @@
   "engines": {
     "node": ">=20"
   },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.26"
+    },
+    "postcss": "8.5.26"
+  },
   "license": "ISC"
 }

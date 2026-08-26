@@ -15,7 +15,13 @@ const globalErrorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof ZodError) {
     const errors: Record<string, string> = {};
     for (const issue of err.issues) {
-      errors[issue.path.join(".") || "_"] = issue.message;
+      // Zod 4 reports unknown keys with an empty path; surface the key itself
+      // so strict-schema rejections are actionable for API consumers.
+      const key =
+        issue.code === "unrecognized_keys"
+          ? (issue.keys[0] ?? "_")
+          : issue.path.join(".") || "_";
+      errors[key] = issue.message;
     }
     res.status(400).json({ status: "fail", message: "Validation failed", errors });
     return;
