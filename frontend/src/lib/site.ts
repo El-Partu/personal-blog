@@ -29,9 +29,8 @@ export const site = {
       "up what I'm learning across mathematics, AI and embedded systems, plus the " +
       "algorithms, operating systems and database internals underneath them.",
     github: "https://github.com/El-Partu",
-    // TODO (Loran): replace with your real LinkedIn URL, or set to "" to omit it.
-    linkedin: "https://linkedin.com/in/your-handle", // PLACEHOLDER
-    email: "you@example.com", // PLACEHOLDER — your public contact address
+    linkedin: "https://linkedin.com/in/loran-partu-19a150256",
+    email: "laurentpartu@gmail.com",
     /** Shown on the About page and emitted as `Person.jobTitle`. */
     jobTitle: "Software Developer",
     /** PLACEHOLDER — set to your university, or "" to omit it from schema. */

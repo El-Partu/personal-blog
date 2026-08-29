@@ -175,11 +175,11 @@ Everything is documented in [`.env.example`](./.env.example). Copy it to
 | `PORT` | no | `4000` | |
 | `NODE_ENV` | no | `development` | |
 | `MONGODB_URI` | **in prod** | — | Empty = in-memory dev store |
-| `JWT_SECRET` | **in prod** | dev fallback | `openssl rand -base64 48` |
+| `JWT_SECRET` | **in prod** | dev fallback | Min 32 chars; `openssl rand -base64 48` |
 | `JWT_EXPIRES_IN` | no | `30d` | |
-| `CORS_ORIGINS` | no | `http://localhost:3000` | Comma-separated |
+| `CORS_ORIGINS` | no | `http://localhost:3000` | Exact origins only; no `*` or wildcards in prod |
 | `ADMIN_EMAIL` | no | `admin@example.com` | Used by the seed script |
-| `ADMIN_PASSWORD` | no | `ChangeMe123!` | **Change before deploying** |
+| `ADMIN_PASSWORD` | no | `ChangeMe123!` | **Change before deploying; the default is refused in prod** |
 | `ADMIN_NAME` | no | `Blog Author` | |
 | `CLOUDINARY_*` | no | — | All three set = uploads go to Cloudinary |
 
@@ -578,6 +578,7 @@ Out of scope per the spec, deliberately left out to avoid half-built features:
 - Analytics dashboard — `viewCount` is tracked per post; add Plausible or GA
   if you want more
 
-Known advisory: `npm audit` reports a build-time-only PostCSS issue reachable
-solely through Next 15's toolchain. Fixing it requires a major Next upgrade;
-it does not affect the deployed runtime.
+`npm audit` is clean: PostCSS is pinned to a patched release via root
+`overrides` (build-time only tooling, but no reason to ship a known
+advisory), and the API enforces raster-only uploads, exact-match CORS,
+http(s)-only URL fields and production boot guards.

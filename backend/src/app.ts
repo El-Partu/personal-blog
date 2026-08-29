@@ -28,20 +28,31 @@ app.use(
 /**
  * CORS: the frontend runs on a different origin, so allowed origins come from
  * the CORS_ORIGINS env var. Credentials are enabled for the auth cookie.
+ *
+ * Matching is exact-match only — no wildcard subdomain patterns and no `*`.
+ * Anyone can register a `*.vercel.app` or `*.e2b.app` subdomain, so accepting
+ * those prefixes would let an attacker's page make authenticated API calls and
+ * read the responses. `CORS_ORIGINS="*"` is refused at boot in production
+ * (see config/env.ts).
+ *
+ * In local dev on an e2b sandbox, `corsPreviewOrigins` adds the *literal*
+ * preview URLs of the current sandbox (derived from `E2B_SANDBOX_ID`) — still
+ * exact origins, and never present in production.
  */
 app.use(
   cors({
     origin(origin, callback) {
       // Same-origin/server-side requests send no Origin header.
       if (!origin) return callback(null, true);
-      if (env.corsOrigins.includes("*") || env.corsOrigins.includes(origin)) {
+      // `*` is a dev-only convenience; production cannot reach this state.
+      if (
+        env.corsOrigins.includes("*") ||
+        env.corsOrigins.includes(origin) ||
+        env.corsPreviewOrigins.includes(origin)
+      ) {
         return callback(null, true);
       }
-      // Any *.vercel.app preview deployment of this project.
-      if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return callback(null, true);
-      // e2b sandbox preview hosts used by the dev environment.
-      if (/^https:\/\/[0-9]+-[a-z0-9-]+\.e2b\.app$/i.test(origin)) return callback(null, true);
-      return callback(new Error(`Origin ${origin} is not allowed by CORS.`));
+      return callback(new AppError(`Origin ${origin} is not allowed by CORS.`, 403));
     },
     credentials: true,
   })

@@ -1,11 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync, readdirSync, statSync, unlinkSync } from "node:fs";
-import { extname, resolve } from "node:path";
+import { resolve } from "node:path";
 import type { Request, Response } from "express";
 import { v2 as cloudinary } from "cloudinary";
 import catchAsync from "../middleware/catchAsync.js";
 import AppError from "../utils/appError.js";
 import { env } from "../config/env.js";
+import {
+  detectRasterImageFormat,
+  rasterExtension,
+  RASTER_EXTENSION_PATTERN,
+} from "../utils/images.js";
 
 const LOCAL_UPLOAD_DIR = resolve(process.cwd(), "uploads");
 
@@ -28,6 +33,17 @@ if (env.cloudinary.enabled) {
 export const uploadImage = catchAsync(async (req: Request, res: Response) => {
   const file = req.file;
   if (!file) throw new AppError("No image file was provided.", 400);
+
+  // Authoritative check on the actual bytes: SVG and every other scriptable /
+  // non-raster format is refused, regardless of the client-supplied filename
+  // or MIME type.
+  const format = detectRasterImageFormat(file.buffer);
+  if (!format) {
+    throw new AppError(
+      "Only raster images are allowed (PNG, JPEG, GIF, WebP or AVIF).",
+      400
+    );
+  }
 
   if (env.cloudinary.enabled) {
     const result = await new Promise<Record<string, unknown>>((resolvePromise, reject) => {
@@ -57,8 +73,9 @@ export const uploadImage = catchAsync(async (req: Request, res: Response) => {
   }
 
   mkdirSync(LOCAL_UPLOAD_DIR, { recursive: true });
-  const safeExt = extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, "") || ".png";
-  const filename = `${randomUUID()}${safeExt}`;
+  // Extension comes from the detected magic bytes only — never from
+  // `file.originalname`, which the client controls.
+  const filename = `${randomUUID()}${rasterExtension(format)}`;
   writeFileSync(resolve(LOCAL_UPLOAD_DIR, filename), file.buffer);
 
   res.status(201).json({
@@ -101,7 +118,7 @@ export const listImages = catchAsync(async (_req: Request, res: Response) => {
   }
 
   const data = files
-    .filter((name) => /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(name))
+    .filter((name) => RASTER_EXTENSION_PATTERN.test(name))
     .map((name) => {
       const stats = statSync(resolve(LOCAL_UPLOAD_DIR, name));
       return {

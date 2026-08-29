@@ -27,6 +27,15 @@ export default function SiteFooter() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link
+                  href="/admin"
+                  className="text-sm transition-colors hover:text-[var(--accent)]"
+                  style={{ color: "var(--fg-muted)" }}
+                >
+                  Admin
+                </Link>
+              </li>
             </ul>
           </nav>
 

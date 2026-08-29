@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { unlinkSync } from "node:fs";
+import { resolve } from "node:path";
 import request from "supertest";
 import bcrypt from "bcryptjs";
 import app from "../app.js";
@@ -94,6 +96,46 @@ describe("GET /health", () => {
   });
 });
 
+describe("CORS", () => {
+  it("allows only the exact configured origin and refuses wildcard sibling hosts", async () => {
+    const allowed = await request(app).get("/health").set("Origin", "http://localhost:3000");
+    expect(allowed.status).toBe(200);
+    expect(allowed.headers["access-control-allow-origin"]).toBe("http://localhost:3000");
+    expect(allowed.headers["access-control-allow-credentials"]).toBe("true");
+
+    // Anyone can register a *.vercel.app / *.e2b.app subdomain, so those
+    // prefixes must never be accepted with credentials.
+    for (const origin of [
+      "https://anything.vercel.app",
+      "https://1234-preview.e2b.app",
+      "https://evil.example.com",
+    ]) {
+      const blocked = await request(app).get("/health").set("Origin", origin);
+      expect(blocked.status).toBe(403);
+      expect(blocked.headers["access-control-allow-origin"]).toBeUndefined();
+      expect(blocked.headers["access-control-allow-credentials"]).toBeUndefined();
+    }
+
+    // On an e2b sandbox, only the *current* sandbox's exact preview origin is
+    // trusted in dev — sibling sandboxes stay blocked.
+    const sandboxId = process.env.E2B_SANDBOX_ID;
+    if (sandboxId) {
+      const preview = await request(app)
+        .get("/health")
+        .set("Origin", `https://3000-${sandboxId}.e2b.app`);
+      expect(preview.status).toBe(200);
+      expect(preview.headers["access-control-allow-origin"]).toBe(
+        `https://3000-${sandboxId}.e2b.app`
+      );
+
+      const sibling = await request(app)
+        .get("/health")
+        .set("Origin", `https://3000-${sandboxId}x.e2b.app`);
+      expect(sibling.status).toBe(403);
+    }
+  });
+});
+
 describe("public posts", () => {
   it("lists only published posts", async () => {
     const response = await request(app).get("/api/v1/posts");
@@ -158,6 +200,23 @@ describe("public posts", () => {
     await request(app).post("/api/v1/posts/published-one/view").expect(204);
     const after = await request(app).get("/api/v1/posts/published-one");
     expect(after.body.data.viewCount).toBe(initial + 1);
+  });
+
+  it("rate-limits the public view counter per client", async () => {
+    // A fresh client IP keeps the test deterministic (the limiter is per-IP).
+    // A non-existent slug is used so the fixture's view counts are untouched.
+    const ip = "10.99.0.1";
+    let ok = 0;
+    let limited = 0;
+    for (let i = 0; i < 31; i++) {
+      const response = await request(app)
+        .post("/api/v1/posts/no-such-post/view")
+        .set("X-Forwarded-For", ip);
+      if (response.status === 204) ok++;
+      if (response.status === 429) limited++;
+    }
+    expect(ok).toBe(30);
+    expect(limited).toBe(1);
   });
 });
 
@@ -371,6 +430,15 @@ describe("admin routes", () => {
     expect(response.body.status).toBe("fail");
   });
 
+  it("rejects unknown keys in request bodies", async () => {
+    const response = await request(app)
+      .post("/api/v1/admin/posts")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ title: "Strict", content: "Body", isAdmin: true });
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toHaveProperty("isAdmin");
+  });
+
   it("updates and deletes a post", async () => {
     const created = await request(app)
       .post("/api/v1/admin/posts")
@@ -423,6 +491,54 @@ describe("admin routes", () => {
 
     expect(after.status).toBe(200);
     expect(after.body.data.seriesId).toBeUndefined();
+  });
+});
+
+describe("image uploads", () => {
+  const PNG_BYTES = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x00,
+  ]);
+
+  it("rejects SVG uploads and spoofed image payloads", async () => {
+    const svg = await request(app)
+      .post("/api/v1/admin/uploads")
+      .set("Authorization", `Bearer ${token}`)
+      .attach(
+        "image",
+        Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'),
+        { filename: "xss.svg", contentType: "image/svg+xml" }
+      );
+    expect(svg.status).toBe(400);
+
+    // Claiming image/png with a script payload must be refused by the
+    // magic-byte check — the MIME type is client-controlled.
+    const spoofed = await request(app)
+      .post("/api/v1/admin/uploads")
+      .set("Authorization", `Bearer ${token}`)
+      .attach("image", Buffer.from("<script>alert(1)</script>"), {
+        filename: "xss.png",
+        contentType: "image/png",
+      });
+    expect(spoofed.status).toBe(400);
+    expect(spoofed.body.message).toMatch(/raster/i);
+  });
+
+  it("derives the stored extension from magic bytes, not the client filename", async () => {
+    const response = await request(app)
+      .post("/api/v1/admin/uploads")
+      .set("Authorization", `Bearer ${token}`)
+      .attach("image", PNG_BYTES, { filename: "evil.svg", contentType: "image/png" });
+
+    expect(response.status).toBe(201);
+    expect(response.body.data.url).toMatch(/^\/uploads\/[0-9a-f-]+\.png$/);
+
+    // Keep the local uploads directory clean (it is gitignored, but tests
+    // should not leave files behind anyway).
+    try {
+      unlinkSync(resolve(process.cwd(), "uploads", response.body.data.publicId));
+    } catch {
+      /* already removed */
+    }
   });
 });
 

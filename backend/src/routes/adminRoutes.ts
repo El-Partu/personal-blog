@@ -4,6 +4,8 @@ import protect from "../middleware/protect.js";
 import { validateBody } from "../middleware/validation.js";
 import * as admin from "../controllers/adminController.js";
 import * as uploads from "../controllers/uploadController.js";
+import { RASTER_MIME_TYPES } from "../utils/images.js";
+import AppError from "../utils/appError.js";
 import {
   postInputSchema,
   postUpdateSchema,
@@ -38,13 +40,15 @@ router.get("/tags", admin.listAdminTags);
 router.post("/tags", validateBody(tagInputSchema), admin.createTag);
 router.delete("/tags/:id", admin.deleteTag);
 
-// Image uploads — 5 MB cap, images only.
+// Image uploads — 5 MB cap, raster images only. The MIME allow-list is a
+// first pass; the controller confirms the format from magic bytes before any
+// bytes are stored (SVG and other scriptable formats are rejected outright).
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, callback) => {
-    if (!file.mimetype.startsWith("image/")) {
-      callback(new Error("Only image uploads are allowed."));
+    if (!RASTER_MIME_TYPES.has(file.mimetype)) {
+      callback(new AppError("Only PNG, JPEG, GIF, WebP or AVIF images are allowed.", 400));
       return;
     }
     callback(null, true);
